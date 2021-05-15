@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-@TestOn('!chrome') // web has different stack traces
+@TestOn('!chrome')
 
 import 'package:flutter/foundation.dart';
-import '../flutter_test_alternative.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Object getAssertionErrorWithMessage() {
   try {
@@ -35,7 +35,7 @@ Object getAssertionErrorWithLongMessage() {
 }
 
 Future<StackTrace> getSampleStack() async {
-  return await Future<StackTrace>.sync(() => StackTrace.current);
+  return Future<StackTrace>.sync(() => StackTrace.current);
 }
 
 Future<void> main() async {
@@ -78,7 +78,7 @@ Future<void> main() async {
       r'#0      getSampleStack\.<anonymous closure> \([^)]+flutter/test/foundation/error_reporting_test\.dart:[0-9]+:[0-9]+\)\n'
       r'#2      getSampleStack \([^)]+flutter/test/foundation/error_reporting_test\.dart:[0-9]+:[0-9]+\)\n'
       r'#3      main \([^)]+flutter/test/foundation/error_reporting_test\.dart:[0-9]+:[0-9]+\)\n'
-      r'(.+\n)+' // TODO(ianh): when fixing #4021, also filter out frames from the test infrastructure below the first call to our main()
+      r'(.+\n)+', // TODO(ianh): when fixing #4021, also filter out frames from the test infrastructure below the first call to our main()
     ));
     console.clear();
     FlutterError.dumpErrorToConsole(FlutterErrorDetails(
@@ -145,21 +145,20 @@ Future<void> main() async {
       r'#0      getSampleStack\.<anonymous closure> \([^)]+flutter/test/foundation/error_reporting_test\.dart:[0-9]+:[0-9]+\)\n'
       r'#2      getSampleStack \([^)]+flutter/test/foundation/error_reporting_test\.dart:[0-9]+:[0-9]+\)\n'
       r'#3      main \([^)]+flutter/test/foundation/error_reporting_test\.dart:[0-9]+:[0-9]+\)\n'
-      r'(.+\n)+' // TODO(ianh): when fixing #4021, also filter out frames from the test infrastructure below the first call to our main()
+      r'(.+\n)+', // TODO(ianh): when fixing #4021, also filter out frames from the test infrastructure below the first call to our main()
     ));
     console.clear();
     FlutterError.dumpErrorToConsole(FlutterErrorDetails(
       exception: getAssertionErrorWithoutMessage(),
     ));
-    expect(console.join('\n'), matches("Another exception was thrown: '[^']+flutter/test/foundation/error_reporting_test\\.dart': Failed assertion: line [0-9]+ pos [0-9]+: 'false': is not true\\."));
+    expect(console.join('\n'), matches(r"Another exception was thrown: '[^']+flutter/test/foundation/error_reporting_test\.dart': Failed assertion: line [0-9]+ pos [0-9]+: 'false': is not true\."));
     console.clear();
     FlutterError.resetErrorCount();
   });
 
   test('Error reporting - NoSuchMethodError', () async {
     expect(console, isEmpty);
-    final Object exception = NoSuchMethodError.withInvocation(5,
-        Invocation.method(#foo, <dynamic>[2, 4]));
+    final Object exception = NoSuchMethodError.withInvocation(5, Invocation.method(#foo, <dynamic>[2, 4]));
 
     FlutterError.dumpErrorToConsole(FlutterErrorDetails(
       exception: exception,
@@ -174,8 +173,10 @@ Future<void> main() async {
     FlutterError.dumpErrorToConsole(FlutterErrorDetails(
       exception: exception,
     ));
-    expect(console.join('\n'),
-      'Another exception was thrown: NoSuchMethodError: int has no foo method accepting arguments (_, _)');
+    expect(
+      console.join('\n'),
+      'Another exception was thrown: NoSuchMethodError: int has no foo method accepting arguments (_, _)',
+    );
     console.clear();
     FlutterError.resetErrorCount();
   });

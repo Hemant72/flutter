@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-@TestOn('!chrome')
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui show Image, ColorFilter;
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
-import 'package:fake_async/fake_async.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-import '../flutter_test_alternative.dart';
 import '../image_data.dart';
 import '../painting/mocks_for_image_cache.dart';
 import '../rendering/rendering_tester.dart';
@@ -38,7 +37,7 @@ class SynchronousTestImageProvider extends ImageProvider<int> {
   @override
   ImageStreamCompleter load(int key, DecoderCallback decode) {
     return OneFrameImageStreamCompleter(
-      SynchronousFuture<ImageInfo>(TestImageInfo(key, image: image, scale: 1.0))
+      SynchronousFuture<ImageInfo>(TestImageInfo(key, image: image, scale: 1.0)),
     );
   }
 }
@@ -72,7 +71,7 @@ class AsyncTestImageProvider extends ImageProvider<int> {
   @override
   ImageStreamCompleter load(int key, DecoderCallback decode) {
     return OneFrameImageStreamCompleter(
-      Future<ImageInfo>.value(TestImageInfo(key, image: image))
+      Future<ImageInfo>.value(TestImageInfo(key, image: image)),
     );
   }
 }
@@ -255,7 +254,7 @@ void main() {
 
         final TestCanvas canvas = TestCanvas();
         const ImageConfiguration imageConfiguration = ImageConfiguration(
-            size: Size(100.0, 100.0)
+          size: Size(100.0, 100.0),
         );
         bool onChangedCalled = false;
         final BoxPainter boxPainter = boxDecoration.createBoxPainter(() {
@@ -328,8 +327,7 @@ void main() {
       image: SynchronousTestImageProvider(image),
       matchTextDirection: true,
     );
-    final BoxDecoration boxDecoration = BoxDecoration(
-        image: backgroundImage);
+    final BoxDecoration boxDecoration = BoxDecoration(image: backgroundImage);
     final BoxPainter boxPainter = boxDecoration.createBoxPainter(() {
       assert(false);
     });
@@ -337,7 +335,9 @@ void main() {
     late FlutterError error;
     try {
       boxPainter.paint(canvas, Offset.zero, const ImageConfiguration(
-          size: Size(100.0, 100.0), textDirection: null));
+        size: Size(100.0, 100.0),
+        textDirection: null,
+      ));
     } on FlutterError catch (e) {
       error = e;
     }
@@ -355,9 +355,9 @@ void main() {
       '     DecorationImage(SynchronousTestImageProvider(),\n'
       '     Alignment.center, match text direction, scale: 1.0)\n'
       '   The ImageConfiguration was:\n'
-      '     ImageConfiguration(size: Size(100.0, 100.0))\n'
+      '     ImageConfiguration(size: Size(100.0, 100.0))\n',
     );
-  });
+  }, skip: kIsWeb);
 
   test('DecorationImage - error listener', () async {
     late String exception;
@@ -365,7 +365,7 @@ void main() {
       image: const SynchronousErrorTestImageProvider('threw'),
       onError: (dynamic error, StackTrace? stackTrace) {
         exception = error as String;
-      }
+      },
     );
 
     backgroundImage.createPainter(() { }).paint(
@@ -663,7 +663,7 @@ void main() {
     final DecorationImage backgroundImage = DecorationImage(
       image: SynchronousTestImageProvider(image),
       scale: 4,
-      alignment: Alignment.topLeft
+      alignment: Alignment.topLeft,
     );
 
     final BoxDecoration boxDecoration = BoxDecoration(image: backgroundImage);
@@ -702,5 +702,5 @@ void main() {
     expect(info.image.debugGetOpenHandleStackTraces()!.length, baselineRefCount);
 
     info.dispose();
-  });
+  }, skip: kIsWeb);
 }

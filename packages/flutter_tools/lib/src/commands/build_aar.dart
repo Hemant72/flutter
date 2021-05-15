@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// @dart = 2.8
 import 'package:meta/meta.dart';
 
 import '../android/android_builder.dart';
 import '../android/gradle_utils.dart';
 import '../base/common.dart';
+
+import '../base/file_system.dart';
 import '../base/os.dart';
 import '../build_info.dart';
 import '../cache.dart';
-import '../globals.dart' as globals;
+import '../globals_null_migrated.dart' as globals;
 import '../project.dart';
 import '../reporting/reporting.dart';
 import '../runner/flutter_command.dart' show FlutterCommandResult;
@@ -40,6 +43,7 @@ class BuildAarCommand extends BuildSubCommand {
     usesPubOption();
     addSplitDebugInfoOption();
     addDartObfuscationOption();
+    usesDartDefineOption();
     usesTrackWidgetCreation(verboseHelp: false);
     addNullSafetyModeOptions(hide: !verboseHelp);
     addEnableExperimentation(hide: !verboseHelp);
@@ -55,12 +59,15 @@ class BuildAarCommand extends BuildSubCommand {
       ..addOption(
         'output-dir',
         help: 'The absolute path to the directory where the repository is generated. '
-              "By default, this is '<current-directory>android/build'. ",
+              'By default, this is "<current-directory>android/build".',
       );
   }
 
   @override
   final String name = 'aar';
+
+  @override
+  bool get reportNullSafety => false;
 
   @override
   Future<Set<DevelopmentArtifact>> get requiredArtifacts async => <DevelopmentArtifact>{
@@ -90,7 +97,9 @@ class BuildAarCommand extends BuildSubCommand {
       'By default, AARs are built for `release`, `debug` and `profile`.\n'
       'The POM file is used to include the dependencies that the AAR was compiled against.\n'
       'To learn more about how to use these artifacts, see '
-      'https://flutter.dev/go/build-aar';
+      'https://flutter.dev/go/build-aar\n'
+      'Note: this command builds applications assuming that the entrypoint is lib/main.dart. '
+      'This cannot currently be configured.';
 
   @override
   Future<FlutterCommandResult> runCommand() async {
@@ -108,11 +117,15 @@ class BuildAarCommand extends BuildSubCommand {
       ? stringArg('build-number')
       : '1.0';
 
+    final File targetFile = globals.fs.file(globals.fs.path.join('lib', 'main.dart'));
     for (final String buildMode in const <String>['debug', 'profile', 'release']) {
       if (boolArg(buildMode)) {
         androidBuildInfo.add(
           AndroidBuildInfo(
-            getBuildInfo(forcedBuildMode: BuildMode.fromName(buildMode)),
+            await getBuildInfo(
+              forcedBuildMode: BuildMode.fromName(buildMode),
+              forcedTargetFile: targetFile,
+            ),
             targetArchs: targetArchitectures,
           )
         );
@@ -122,9 +135,10 @@ class BuildAarCommand extends BuildSubCommand {
       throwToolExit('Please specify a build mode and try again.');
     }
 
+    displayNullSafetyMode(androidBuildInfo.first.buildInfo);
     await androidBuilder.buildAar(
       project: _getProject(),
-      target: '', // Not needed because this command only builds Android's code.
+      target: targetFile.path,
       androidBuildInfo: androidBuildInfo,
       outputDirectoryPath: stringArg('output-dir'),
       buildNumber: buildNumber,
@@ -138,6 +152,6 @@ class BuildAarCommand extends BuildSubCommand {
     if (argResults.rest.isEmpty) {
       return FlutterProject.current();
     }
-    return FlutterProject.fromPath(findProjectRoot(argResults.rest.first));
+    return FlutterProject.fromDirectory(globals.fs.directory(findProjectRoot(globals.fs, argResults.rest.first)));
   }
 }

@@ -7,7 +7,6 @@ import 'dart:ui' as ui show TextBox;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'rendering_tester.dart';
@@ -31,6 +30,26 @@ class RenderParagraphWithEmptySelectionBoxList extends RenderParagraph {
   @override
   List<ui.TextBox> getBoxesForSelection(TextSelection selection) {
     if (selection == emptyListSelection) {
+      return <ui.TextBox>[];
+    }
+    return super.getBoxesForSelection(selection);
+  }
+}
+
+// A subclass of RenderParagraph that returns an empty list in getBoxesForSelection
+// for a selection representing a WidgetSpan.
+// This is intended to simulate how SkParagraph's implementation of Paragraph.getBoxesForRange
+// can return an empty list for a WidgetSpan with empty dimensions.
+class RenderParagraphWithEmptyBoxListForWidgetSpan extends RenderParagraph {
+  RenderParagraphWithEmptyBoxListForWidgetSpan(
+    InlineSpan text, {
+    required List<RenderBox> children,
+    required TextDirection textDirection,
+  }) : super(text, children: children, textDirection: textDirection);
+
+  @override
+  List<ui.TextBox> getBoxesForSelection(TextSelection selection) {
+    if (text.getSpanForPosition(selection.base) is WidgetSpan) {
       return <ui.TextBox>[];
     }
     return super.getBoxesForSelection(selection);
@@ -93,13 +112,13 @@ void main() {
     layout(paragraph);
 
     List<ui.TextBox> boxes = paragraph.getBoxesForSelection(
-        const TextSelection(baseOffset: 5, extentOffset: 25)
+      const TextSelection(baseOffset: 5, extentOffset: 25),
     );
 
     expect(boxes.length, equals(1));
 
     boxes = paragraph.getBoxesForSelection(
-        const TextSelection(baseOffset: 25, extentOffset: 50)
+      const TextSelection(baseOffset: 25, extentOffset: 50),
     );
 
     expect(boxes.any((ui.TextBox box) => box.left == 250 && box.top == 0), isTrue);
@@ -301,7 +320,7 @@ void main() {
     final List<ui.TextBox> boxes = <ui.TextBox>[
       for (int i = 0; i < text.length; ++i)
         ...paragraph.getBoxesForSelection(
-          TextSelection(baseOffset: i, extentOffset: i + 1)
+          TextSelection(baseOffset: i, extentOffset: i + 1),
         ),
     ];
     expect(boxes.length, equals(4));
@@ -343,7 +362,7 @@ void main() {
         '   ║ TextSpan:\n'
         '   ║   "I polished up that handle so carefullee\n'
         '   ║   That now I am the Ruler of the Queen\'s Navee!"\n'
-        '   ╚═══════════\n'
+        '   ╚═══════════\n',
       ),
     );
   });
@@ -389,7 +408,7 @@ void main() {
     layout(paragraph, constraints: const BoxConstraints(maxWidth: 100.0));
 
     final List<ui.TextBox> boxes = paragraph.getBoxesForSelection(
-        const TextSelection(baseOffset: 0, extentOffset: 8)
+      const TextSelection(baseOffset: 0, extentOffset: 8),
     );
 
     expect(boxes.length, equals(5));
@@ -410,8 +429,8 @@ void main() {
     RenderParagraph paragraph = RenderParagraph(
       const TextSpan(
         children: <InlineSpan> [
-          WidgetSpan(child: Text(sentence))
-        ]
+          WidgetSpan(child: Text(sentence)),
+        ],
       ),
       textScaleFactor: 1.0,
       children: renderBoxes,
@@ -428,8 +447,8 @@ void main() {
     paragraph = RenderParagraph(
       const TextSpan(
         children: <InlineSpan> [
-          WidgetSpan(child: Text(sentence))
-        ]
+          WidgetSpan(child: Text(sentence)),
+        ],
       ),
       textScaleFactor: 2.0,
       children: renderBoxes,
@@ -455,8 +474,8 @@ void main() {
     RenderParagraph paragraph = RenderParagraph(
       const TextSpan(
         children: <InlineSpan> [
-          WidgetSpan(child: Text(sentence))
-        ]
+          WidgetSpan(child: Text(sentence)),
+        ],
       ),
       textScaleFactor: 1.0,
       children: renderBoxes,
@@ -473,8 +492,8 @@ void main() {
     paragraph = RenderParagraph(
       const TextSpan(
         children: <InlineSpan> [
-          WidgetSpan(child: Text(sentence))
-        ]
+          WidgetSpan(child: Text(sentence)),
+        ],
       ),
       textScaleFactor: 2.0,
       children: renderBoxes,
@@ -522,7 +541,7 @@ void main() {
     layout(paragraph, constraints: const BoxConstraints(maxWidth: 50.0));
 
     final List<ui.TextBox> boxes = paragraph.getBoxesForSelection(
-        const TextSelection(baseOffset: 0, extentOffset: 12)
+      const TextSelection(baseOffset: 0, extentOffset: 12),
     );
 
     expect(boxes.length, equals(9));
@@ -581,6 +600,27 @@ void main() {
       ]),
       textDirection: TextDirection.rtl,
       emptyListSelection: const TextSelection(baseOffset: 0, extentOffset: 1),
+    );
+    layout(paragraph);
+
+    final SemanticsNode node = SemanticsNode();
+    paragraph.assembleSemanticsNode(node, SemanticsConfiguration(), <SemanticsNode>[]);
+    expect(node.childrenCount, 2);
+  }, skip: isBrowser); // https://github.com/flutter/flutter/issues/61020
+
+  test('assembleSemanticsNode handles empty WidgetSpans that do not yield selection boxes', () {
+    final TextSpan text = TextSpan(text: '', children: <InlineSpan>[
+      TextSpan(text: 'A', recognizer: TapGestureRecognizer()..onTap = () {}),
+      const WidgetSpan(child: SizedBox(width: 0, height: 0)),
+      TextSpan(text: 'C', recognizer: TapGestureRecognizer()..onTap = () {}),
+    ]);
+    final List<RenderBox> renderBoxes = <RenderBox>[
+      RenderParagraph(const TextSpan(text: 'b'), textDirection: TextDirection.ltr),
+    ];
+    final RenderParagraph paragraph = RenderParagraphWithEmptyBoxListForWidgetSpan(
+      text,
+      children: renderBoxes,
+      textDirection: TextDirection.ltr,
     );
     layout(paragraph);
 

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+
+import '../rendering/mock_canvas.dart';
 
 class StateMarker extends StatefulWidget {
   const StateMarker({ Key? key, this.child }) : super(key: key);
@@ -100,10 +102,10 @@ void main() {
             return Material(
               child: ElevatedButton(
                 child: const Text('X'),
-                onPressed: () { Navigator.of(context)!.pushNamed('/next'); },
+                onPressed: () { Navigator.of(context).pushNamed('/next'); },
               ),
             );
-          }
+          },
         ),
         routes: <String, WidgetBuilder>{
           '/next': (BuildContext context) {
@@ -144,7 +146,7 @@ void main() {
           builder: (BuildContext context) {
             ++buildCounter;
             return const Text('A');
-          }
+          },
         ),
       ),
     );
@@ -156,7 +158,7 @@ void main() {
           builder: (BuildContext context) {
             ++buildCounter;
             return const Text('B');
-          }
+          },
         ),
       ),
     );
@@ -170,7 +172,7 @@ void main() {
       builder: (BuildContext context) {
         ++buildCounter;
         return const Placeholder();
-      }
+      },
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -253,16 +255,16 @@ void main() {
     await tester.pumpWidget(
         MaterialApp(
           home: Builder(
-              builder: (BuildContext context) {
-                return Material(
-                  child: ElevatedButton(
-                      child: const Text('X'),
-                      onPressed: () async {
-                        result = Navigator.of(context)!.pushNamed<Object?>('/a');
-                      },
-                  ),
-                );
-              }
+            builder: (BuildContext context) {
+              return Material(
+                child: ElevatedButton(
+                    child: const Text('X'),
+                    onPressed: () async {
+                      result = Navigator.of(context).pushNamed<Object?>('/a');
+                    },
+                ),
+              );
+            },
           ),
           routes: <String, WidgetBuilder>{
             '/a': (BuildContext context) {
@@ -270,7 +272,7 @@ void main() {
                 child: ElevatedButton(
                   child: const Text('Y'),
                   onPressed: () {
-                    Navigator.of(context)!.pop('all done');
+                    Navigator.of(context).pop('all done');
                   },
                 ),
               );
@@ -464,7 +466,7 @@ void main() {
     double? textScaleFactor;
     await tester.pumpWidget(MaterialApp(
       home: Builder(builder:(BuildContext context) {
-        textScaleFactor = MediaQuery.of(context)!.textScaleFactor;
+        textScaleFactor = MediaQuery.of(context).textScaleFactor;
         return Container();
       }),
     ));
@@ -523,7 +525,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-            brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -531,7 +533,7 @@ void main() {
         themeMode: ThemeMode.light,
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -544,7 +546,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-            brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -552,7 +554,7 @@ void main() {
         themeMode: ThemeMode.light,
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -569,7 +571,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-            brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -577,7 +579,7 @@ void main() {
         themeMode: ThemeMode.dark,
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -590,7 +592,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-            brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -598,7 +600,7 @@ void main() {
         themeMode: ThemeMode.dark,
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -617,7 +619,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-          brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -625,7 +627,7 @@ void main() {
         themeMode: ThemeMode.system,
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -643,7 +645,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-            brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -651,7 +653,7 @@ void main() {
         themeMode: ThemeMode.system,
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -670,11 +672,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-          brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -695,7 +697,7 @@ void main() {
       MaterialApp(
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -719,7 +721,7 @@ void main() {
         ),
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -739,14 +741,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-          brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
         ),
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -772,7 +774,7 @@ void main() {
         ),
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -805,7 +807,7 @@ void main() {
         ),
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -832,7 +834,7 @@ void main() {
         ),
         home: Builder(
           builder: (BuildContext context) {
-            appliedTheme = Theme.of(context)!;
+            appliedTheme = Theme.of(context);
             return const SizedBox();
           },
         ),
@@ -855,7 +857,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
-          brightness: Brightness.light
+          brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -882,6 +884,37 @@ void main() {
     expect(themeAfterBrightnessChange!.brightness, Brightness.dark);
   });
 
+  testWidgets('MaterialApp provides default overscroll color', (WidgetTester tester) async {
+    Future<void> slowDrag(WidgetTester tester, Offset start, Offset offset) async {
+      final TestGesture gesture = await tester.startGesture(start);
+      for (int index = 0; index < 10; index += 1) {
+        await gesture.moveBy(offset);
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      await gesture.up();
+    }
+
+    // The overscroll color should be a transparent version of the colorScheme's
+    // secondary color.
+    const Color secondaryColor = Color(0xff008800);
+    final Color glowSecondaryColor = secondaryColor.withOpacity(0.05);
+    final ThemeData theme = ThemeData.from(
+      colorScheme: const ColorScheme.light().copyWith(secondary: secondaryColor),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: const SingleChildScrollView(
+          child: SizedBox(height: 2000.0),
+        ),
+      ),
+    );
+
+    final RenderObject painter = tester.renderObject(find.byType(CustomPaint).first);
+    await slowDrag(tester, const Offset(200.0, 200.0), const Offset(0.0, 5.0));
+    expect(painter, paints..circle(color: glowSecondaryColor));
+  });
+
   testWidgets('MaterialApp can customize initial routes', (WidgetTester tester) async {
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
     await tester.pumpWidget(
@@ -894,17 +927,19 @@ void main() {
               pageBuilder: (
                 BuildContext context,
                 Animation<double> animation,
-                Animation<double> secondaryAnimation) {
+                Animation<double> secondaryAnimation,
+              ) {
                 return const Text('non-regular page one');
-              }
+              },
             ),
             PageRouteBuilder<void>(
               pageBuilder: (
                 BuildContext context,
                 Animation<double> animation,
-                Animation<double> secondaryAnimation) {
+                Animation<double> secondaryAnimation,
+              ) {
                 return const Text('non-regular page two');
-              }
+              },
             ),
           ];
         },
@@ -913,7 +948,7 @@ void main() {
           '/': (BuildContext context) => const Text('regular page one'),
           '/abc': (BuildContext context) => const Text('regular page two'),
         },
-      )
+      ),
     );
     expect(find.text('non-regular page two'), findsOneWidget);
     expect(find.text('non-regular page one'), findsNothing);
@@ -931,7 +966,7 @@ void main() {
     final HeroController controller = MaterialApp.createMaterialHeroController();
     final Tween<Rect?> tween = controller.createRectTween!(
       const Rect.fromLTRB(0.0, 0.0, 10.0, 10.0),
-      const Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)
+      const Rect.fromLTRB(0.0, 0.0, 20.0, 20.0),
     );
     expect(tween, isA<MaterialRectArcTween>());
   });
@@ -967,7 +1002,7 @@ void main() {
           location: 'popped',
         );
         return route.didPop(result);
-      }
+      },
     );
     await tester.pumpWidget(MaterialApp.router(
       routeInformationProvider: provider,
@@ -993,6 +1028,46 @@ void main() {
     ));
     expect(builderChild, isNull);
   });
+
+  testWidgets('MaterialApp has correct default ScrollBehavior', (WidgetTester tester) async {
+    late BuildContext capturedContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (BuildContext context) {
+            capturedContext = context;
+            return const Placeholder();
+          },
+        ),
+      ),
+    );
+    expect(ScrollConfiguration.of(capturedContext).runtimeType, MaterialScrollBehavior);
+  });
+
+  testWidgets('A ScrollBehavior can be set for MaterialApp', (WidgetTester tester) async {
+    late BuildContext capturedContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        scrollBehavior: const MockScrollBehavior(),
+        home: Builder(
+          builder: (BuildContext context) {
+            capturedContext = context;
+            return const Placeholder();
+          },
+        ),
+      ),
+    );
+    final ScrollBehavior scrollBehavior = ScrollConfiguration.of(capturedContext);
+    expect(scrollBehavior.runtimeType, MockScrollBehavior);
+    expect(scrollBehavior.getScrollPhysics(capturedContext).runtimeType, NeverScrollableScrollPhysics);
+  });
+}
+
+class MockScrollBehavior extends ScrollBehavior {
+  const MockScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) => const NeverScrollableScrollPhysics();
 }
 
 class MockAccessibilityFeature implements AccessibilityFeatures {
@@ -1075,7 +1150,7 @@ class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation> wit
         MaterialPage<void>(
           key: ValueKey<String>(routeInformation.location!),
           child: builder(context, routeInformation),
-        )
+        ),
       ],
     );
   }

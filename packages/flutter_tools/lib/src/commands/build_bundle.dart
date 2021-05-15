@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// @dart = 2.8
+
 import '../base/common.dart';
 import '../build_info.dart';
 import '../bundle.dart';
 import '../features.dart';
-import '../globals.dart' as globals;
+import '../globals_null_migrated.dart' as globals;
 import '../project.dart';
 import '../reporting/reporting.dart';
-import '../runner/flutter_command.dart' show FlutterOptions, FlutterCommandResult;
+import '../runner/flutter_command.dart';
 import 'build.dart';
 
 class BuildBundleCommand extends BuildSubCommand {
@@ -18,23 +20,15 @@ class BuildBundleCommand extends BuildSubCommand {
     usesTargetOption();
     usesFilesystemOptions(hide: !verboseHelp);
     usesBuildNumberOption();
-    addBuildModeFlags(verboseHelp: verboseHelp);
-    usesExtraFrontendOptions();
+    addBuildModeFlags(verboseHelp: verboseHelp, defaultToRelease: false);
+    usesDartDefineOption();
+    usesExtraDartFlagOptions(verboseHelp: verboseHelp);
     argParser
-      ..addFlag(
-        'precompiled',
-        negatable: false,
-        help:
-          'If not provided, then '
-          'a debug build is always provided, regardless of build mode. If provided '
-          'then release is the default mode.',
+      ..addOption('depfile',
+        defaultsTo: defaultDepfilePath,
+        help: 'A file path where a depfile will be written. '
+              'This contains all build inputs and outputs in a Make-style syntax.'
       )
-      // This option is still referenced by the iOS build scripts. We should
-      // remove it once we've updated those build scripts.
-      ..addOption('asset-base', help: 'Ignored. Will be removed.', hide: !verboseHelp)
-      ..addOption('manifest', defaultsTo: defaultManifestPath)
-      ..addOption('private-key', defaultsTo: defaultPrivateKeyPath)
-      ..addOption('depfile', defaultsTo: defaultDepfilePath)
       ..addOption('target-platform',
         defaultsTo: 'android-arm',
         allowed: const <String>[
@@ -43,20 +37,18 @@ class BuildBundleCommand extends BuildSubCommand {
           'android-x86',
           'android-x64',
           'ios',
-          'darwin-x64',
+          'darwin',
           'linux-x64',
+          'linux-arm64',
           'windows-x64',
         ],
+        help: 'The architecture for which to build the application.',
       )
-      ..addOption('asset-dir', defaultsTo: getAssetBuildDirectory())
-      ..addMultiOption(FlutterOptions.kExtraGenSnapshotOptions,
-        splitCommas: true,
-        hide: true,
-      )
-      ..addFlag('report-licensed-packages',
-        help: 'Whether to report the names of all the packages that are included '
-              "in the application's LICENSE file.",
-        defaultsTo: false);
+      ..addOption('asset-dir',
+        defaultsTo: getAssetBuildDirectory(),
+        help: 'The output directory for the kernel_blob.bin file, the native snapshet, the assets, etc. '
+              'Can be used to redirect the output when driving the Flutter toolchain from another build system.',
+      );
     usesPubOption();
     usesTrackWidgetCreation(verboseHelp: verboseHelp);
 
@@ -79,7 +71,7 @@ class BuildBundleCommand extends BuildSubCommand {
   @override
   Future<Map<CustomDimensions, String>> get usageValues async {
     final String projectDir = globals.fs.file(targetFile).parent.parent.path;
-    final FlutterProject flutterProject = FlutterProject.fromPath(projectDir);
+    final FlutterProject flutterProject = FlutterProject.fromDirectory(globals.fs.directory(projectDir));
     if (flutterProject == null) {
       return const <CustomDimensions, String>{};
     }
@@ -98,7 +90,7 @@ class BuildBundleCommand extends BuildSubCommand {
     }
     // Check for target platforms that are only allowed via feature flags.
     switch (platform) {
-      case TargetPlatform.darwin_x64:
+      case TargetPlatform.darwin:
         if (!featureFlags.isMacOSEnabled) {
           throwToolExit('macOS is not a supported target platform.');
         }
@@ -117,24 +109,16 @@ class BuildBundleCommand extends BuildSubCommand {
         break;
     }
 
-    final BuildInfo buildInfo = getBuildInfo();
+    final BuildInfo buildInfo = await getBuildInfo();
+    displayNullSafetyMode(buildInfo);
 
     await bundleBuilder.build(
       platform: platform,
       buildInfo: buildInfo,
       mainPath: targetFile,
-      manifestPath: stringArg('manifest'),
+      manifestPath: defaultManifestPath,
       depfilePath: stringArg('depfile'),
-      privateKeyPath: stringArg('private-key'),
       assetDirPath: stringArg('asset-dir'),
-      precompiledSnapshot: boolArg('precompiled'),
-      reportLicensedPackages: boolArg('report-licensed-packages'),
-      trackWidgetCreation: boolArg('track-widget-creation'),
-      extraFrontEndOptions: buildInfo.extraFrontEndOptions,
-      extraGenSnapshotOptions: buildInfo.extraGenSnapshotOptions,
-      fileSystemScheme: stringArg('filesystem-scheme'),
-      fileSystemRoots: stringsArg('filesystem-root'),
-      treeShakeIcons: buildInfo.treeShakeIcons,
     );
     return FlutterCommandResult.success();
   }

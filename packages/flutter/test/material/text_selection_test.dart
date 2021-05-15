@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import '../widgets/text.dart' show findRenderEditable, globalize, textOffsetToPosition;
+import 'package:flutter_test/flutter_test.dart';
+
+import '../widgets/editable_text_utils.dart' show findRenderEditable, globalize, textOffsetToPosition;
 
 class MockClipboard {
   Object _clipboardData = <String, dynamic>{
@@ -556,7 +556,6 @@ void main() {
               selectionHandleColor: Color(0x550000AA),
             ),
           ),
-          isMaterialAppTheme: true,
           child: Builder(
             builder: (BuildContext context) {
               return Container(

@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter_devicelab/framework/adb.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:process/process.dart';
@@ -278,10 +279,10 @@ Future<Process> startProcess(
   assert(isBot != null);
   final String command = '$executable ${arguments?.join(" ") ?? ""}';
   final String finalWorkingDirectory = workingDirectory ?? cwd;
-  print('\nExecuting: $command in $finalWorkingDirectory'
-      + (environment != null ? ' with environment $environment' : ''));
   final Map<String, String> newEnvironment = Map<String, String>.from(environment ?? <String, String>{});
   newEnvironment['BOT'] = isBot ? 'true' : 'false';
+  newEnvironment['LANG'] = 'en_US.UTF-8';
+  print('\nExecuting: $command in $finalWorkingDirectory with environment $newEnvironment');
   final Process process = await _processManager.start(
     <String>[executable, ...arguments],
     environment: newEnvironment,
@@ -432,14 +433,31 @@ Future<String> eval(
 }
 
 List<String> flutterCommandArgs(String command, List<String> options) {
+  // Commands support the --device-timeout flag.
+  final Set<String> supportedDeviceTimeoutCommands = <String>{
+    'attach',
+    'devices',
+    'drive',
+    'install',
+    'logs',
+    'run',
+    'screenshot',
+  };
   return <String>[
     command,
+    if (deviceOperatingSystem == DeviceOperatingSystem.ios && supportedDeviceTimeoutCommands.contains(command))
+      ...<String>[
+        '--device-timeout',
+        '5',
+      ],
     if (localEngine != null) ...<String>['--local-engine', localEngine],
     if (localEngineSrcPath != null) ...<String>['--local-engine-src-path', localEngineSrcPath],
     ...options,
   ];
 }
 
+/// Runs the flutter `command`, and returns the exit code.
+/// If `canFail` is `false`, the future completes with an error.
 Future<int> flutter(String command, {
   List<String> options = const <String>[],
   bool canFail = false, // as in, whether failures are ok. False means that they are fatal.
@@ -483,18 +501,24 @@ Future<int> dart(List<String> args) => exec(dartBin, <String>['--disable-dart-de
 /// Returns a future that completes with a path suitable for JAVA_HOME
 /// or with null, if Java cannot be found.
 Future<String> findJavaHome() async {
-  final Iterable<String> hits = grep(
-    'Java binary at: ',
-    from: await evalFlutter('doctor', options: <String>['-v']),
-  );
-  if (hits.isEmpty)
-    return null;
-  final String javaBinary = hits.first.split(': ').last;
-  // javaBinary == /some/path/to/java/home/bin/java
-  return path.dirname(path.dirname(javaBinary));
+  if (_javaHome == null) {
+    final Iterable<String> hits = grep(
+      'Java binary at: ',
+      from: await evalFlutter('doctor', options: <String>['-v']),
+    );
+    if (hits.isEmpty)
+      return null;
+    final String javaBinary = hits.first
+        .split(': ')
+        .last;
+    // javaBinary == /some/path/to/java/home/bin/java
+    _javaHome = path.dirname(path.dirname(javaBinary));
+  }
+  return _javaHome;
 }
+String _javaHome;
 
-Future<T> inDirectory<T>(dynamic directory, Future<T> action()) async {
+Future<T> inDirectory<T>(dynamic directory, Future<T> Function() action) async {
   final String previousCwd = cwd;
   try {
     cd(directory);
@@ -609,7 +633,7 @@ Iterable<String> grep(Pattern pattern, {@required String from}) {
 ///     } catch (error, chain) {
 ///
 ///     }
-Future<void> runAndCaptureAsyncStacks(Future<void> callback()) {
+Future<void> runAndCaptureAsyncStacks(Future<void> Function() callback) {
   final Completer<void> completer = Completer<void>();
   Chain.capture(() async {
     await callback();
@@ -730,7 +754,7 @@ Future<int> gitClone({String path, String repo}) async {
 
   await Directory(path).create(recursive: true);
 
-  return await inDirectory<int>(
+  return inDirectory<int>(
     path,
         () => exec('git', <String>['clone', repo]),
   );

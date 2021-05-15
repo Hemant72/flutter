@@ -146,7 +146,7 @@ class RouteInformation {
 /// considered unusual for these delegates to change during the lifetime of the
 /// [Router].
 ///
-/// If the [Router] itself is disposed while an an asynchronous operation is in
+/// If the [Router] itself is disposed while an asynchronous operation is in
 /// progress, all active asynchronous operations will have their results
 /// discarded also.
 ///
@@ -219,7 +219,7 @@ class RouteInformation {
 ///   widget should update the URL (typically the top-most one created by the
 ///   [WidgetsApp.router], [MaterialApp.router], or [CupertinoApp.router]).
 ///
-/// * The application does not need to implemenent in-app navigation using the
+/// * The application does not need to implement in-app navigation using the
 ///   browser's back and forward buttons.
 ///
 /// In other cases, it is strongly recommended to implement the
@@ -247,7 +247,7 @@ class Router<T> extends StatefulWidget {
           (routeInformationProvider == null) == (routeInformationParser == null),
           'Both routeInformationProvider and routeInformationParser must be provided '
           'if this router parses route information. Otherwise, they should both '
-          'be null.'
+          'be null.',
         ),
         assert(routerDelegate != null),
         super(key: key);
@@ -298,19 +298,45 @@ class Router<T> extends StatefulWidget {
   /// This method provides access to the delegates in the [Router]. For example,
   /// this can be used to access the [backButtonDispatcher] of the parent router
   /// when creating a [ChildBackButtonDispatcher] for a nested [Router].
-  static Router<dynamic>? of(BuildContext context, {bool nullOk = false}) {
+  ///
+  /// If no [Router] ancestor exists for the given context, this will assert in
+  /// debug mode, and throw an exception in release mode.
+  ///
+  /// See also:
+  ///
+  ///  * [maybeOf], which is a similar function, but it will return null instead
+  ///    of throwing an exception if no [Router] ancestor exists.
+  static Router<T> of<T extends Object?>(BuildContext context) {
     final _RouterScope? scope = context.dependOnInheritedWidgetOfExactType<_RouterScope>();
     assert(() {
-      if (scope == null && !nullOk) {
+      if (scope == null) {
         throw FlutterError(
           'Router operation requested with a context that does not include a Router.\n'
           'The context used to retrieve the Router must be that of a widget that '
-          'is a descendant of a Router widget.'
+          'is a descendant of a Router widget.',
         );
       }
       return true;
     }());
-    return scope?.routerState.widget;
+    return scope!.routerState.widget as Router<T>;
+  }
+
+  /// Retrieves the immediate [Router] ancestor from the given context.
+  ///
+  /// This method provides access to the delegates in the [Router]. For example,
+  /// this can be used to access the [backButtonDispatcher] of the parent router
+  /// when creating a [ChildBackButtonDispatcher] for a nested [Router].
+  ///
+  /// If no `Router` ancestor exists for the given context, this will return
+  /// null.
+  ///
+  /// See also:
+  ///
+  ///  * [of], a similar method that returns a non-nullable value, and will
+  ///    throw if no [Router] ancestor exists.
+  static Router<T>? maybeOf<T extends Object?>(BuildContext context) {
+    final _RouterScope? scope = context.dependOnInheritedWidgetOfExactType<_RouterScope>();
+    return scope?.routerState.widget as Router<T>?;
   }
 
   /// Forces the [Router] to run the [callback] and reports the route
@@ -344,7 +370,7 @@ class Router<T> extends StatefulWidget {
     scope.routerState._setStateWithExplicitReportStatus(_IntentionToReportRouteInformation.must, callback);
   }
 
-  /// Forces the [Router] to to run the [callback] without reporting the route
+  /// Forces the [Router] to run the [callback] without reporting the route
   /// information back to the engine.
   ///
   /// Use this method if you don't want the [Router] to report the new route
@@ -470,7 +496,7 @@ class _RouterState<T> extends State<Router<T>> {
               'Router.routeInformationParser returns a null RouteInformation. '
               'If you opt for route information reporting, the '
               'routeInformationParser must not report null for a given '
-              'configuration.'
+              'configuration.',
           ),
         );
       }
@@ -494,7 +520,7 @@ class _RouterState<T> extends State<Router<T>> {
               'Both Router.navigate and Router.neglect have been called in this '
               'build cycle, and the Router cannot decide whether to report the '
               'route information. Please make sure only one of them is called '
-              'within the same build cycle.'
+              'within the same build cycle.',
           ),
         );
       }
@@ -678,9 +704,9 @@ class _RouterScope extends InheritedWidget {
 
   final ValueListenable<RouteInformation?>? routeInformationProvider;
   final BackButtonDispatcher? backButtonDispatcher;
-  final RouteInformationParser<dynamic>? routeInformationParser;
-  final RouterDelegate<dynamic> routerDelegate;
-  final _RouterState<dynamic> routerState;
+  final RouteInformationParser<Object?>? routeInformationParser;
+  final RouterDelegate<Object?> routerDelegate;
+  final _RouterState<Object?> routerState;
 
   @override
   bool updateShouldNotify(_RouterScope oldWidget) {
@@ -734,6 +760,7 @@ class _CallbackHookProvider<T> {
   /// Exceptions thrown by callbacks will be caught and reported using
   /// [FlutterError.reportError].
   @protected
+  @pragma('vm:notify-debugger-on-exception')
   T invokeCallback(T defaultValue) {
     if (_callbacks.isEmpty)
       return defaultValue;
@@ -747,7 +774,7 @@ class _CallbackHookProvider<T> {
         context: ErrorDescription('while invoking the callback for $runtimeType'),
         informationCollector: () sync* {
           yield DiagnosticsProperty<_CallbackHookProvider<T>>(
-            'The $runtimeType that invoked the callback was:',
+            'The $runtimeType that invoked the callback was',
             this,
             style: DiagnosticsTreeStyle.errorProperty,
           );
@@ -774,10 +801,11 @@ class _CallbackHookProvider<T> {
 /// the callback should return a future that completes to true if it can handle
 /// the pop request, and a future that completes to false otherwise.
 abstract class BackButtonDispatcher extends _CallbackHookProvider<Future<bool>> {
-  LinkedHashSet<ChildBackButtonDispatcher>? _children;
+  late final LinkedHashSet<ChildBackButtonDispatcher> _children =
+    <ChildBackButtonDispatcher>{} as LinkedHashSet<ChildBackButtonDispatcher>;
 
   @override
-  bool get hasCallbacks => super.hasCallbacks || (_children != null && _children!.isNotEmpty);
+  bool get hasCallbacks => super.hasCallbacks || (_children.isNotEmpty);
 
   /// Handles a pop route request.
   ///
@@ -797,12 +825,12 @@ abstract class BackButtonDispatcher extends _CallbackHookProvider<Future<bool>> 
   /// return a future of true or false.
   @override
   Future<bool> invokeCallback(Future<bool> defaultValue) {
-    if (_children != null && _children!.isNotEmpty) {
-      final List<ChildBackButtonDispatcher> children = _children!.toList();
+    if (_children.isNotEmpty) {
+      final List<ChildBackButtonDispatcher> children = _children.toList();
       int childIndex = children.length - 1;
 
       Future<bool> notifyNextChild(bool result) {
-        // If the previous child handles the callback, we returns the result.
+        // If the previous child handles the callback, we return the result.
         if (result)
           return SynchronousFuture<bool>(result);
         // If the previous child did not handle the callback, we ask the next
@@ -852,10 +880,7 @@ abstract class BackButtonDispatcher extends _CallbackHookProvider<Future<bool>> 
   ///
   /// The [BackButtonDispatcher] must have a listener registered before it can
   /// be told to take priority.
-  void takePriority() {
-    if (_children != null)
-      _children!.clear();
-  }
+  void takePriority() => _children.clear();
 
   /// Mark the given child as taking priority over this object and the other
   /// children.
@@ -870,16 +895,12 @@ abstract class BackButtonDispatcher extends _CallbackHookProvider<Future<bool>> 
   /// Calling this again without first calling [forget] moves the child back to
   /// the head of the list.
   ///
-  // (Actually it moves it to the end of the list and we treat the end of the
-  // list to be the priority end, but that's an implementation detail.)
-  //
   /// The [BackButtonDispatcher] must have a listener registered before it can
   /// be told to defer to a child.
   void deferTo(ChildBackButtonDispatcher child) {
     assert(hasCallbacks);
-    _children ??= <ChildBackButtonDispatcher>{} as LinkedHashSet<ChildBackButtonDispatcher>;
-    _children!.remove(child); // child may or may not be in the set already
-    _children!.add(child);
+    _children.remove(child); // child may or may not be in the set already
+    _children.add(child);
   }
 
   /// Causes the given child to be removed from the list of children to which
@@ -894,11 +915,7 @@ abstract class BackButtonDispatcher extends _CallbackHookProvider<Future<bool>> 
   /// this object itself is a [ChildBackButtonDispatcher], [takePriority] would
   /// additionally attempt to claim priority from its parent, whereas removing
   /// the last child does not.)
-  void forget(ChildBackButtonDispatcher child) {
-    assert(_children != null);
-    assert(_children!.contains(child));
-    _children!.remove(child);
-  }
+  void forget(ChildBackButtonDispatcher child) => _children.remove(child);
 }
 
 /// The default implementation of back button dispatcher for the root router.
@@ -970,6 +987,7 @@ class ChildBackButtonDispatcher extends BackButtonDispatcher {
   @override
   void deferTo(ChildBackButtonDispatcher child) {
     assert(hasCallbacks);
+    parent.deferTo(this);
     super.deferTo(child);
   }
 
@@ -979,6 +997,75 @@ class ChildBackButtonDispatcher extends BackButtonDispatcher {
     if (!hasCallbacks)
       parent.forget(this);
   }
+}
+
+/// A convenience widget that registers a callback for when the back button is pressed.
+///
+/// In order to use this widget, there must be an ancestor [Router] widget in the tree
+/// that has a [RootBackButtonDispatcher]. e.g. The [Router] widget created by the
+/// [MaterialApp.router] has a built-in [RootBackButtonDispatcher] by default.
+///
+/// It only applies to platforms that accept back button clicks, such as Android.
+///
+/// It can be useful for scenarios, in which you create a different state in your
+/// screen but don't want to use a new page for that.
+class BackButtonListener extends StatefulWidget {
+  /// Creates a BackButtonListener widget .
+  ///
+  /// The [child] and [onBackButtonPressed] arguments must not be null.
+  const BackButtonListener({
+    Key? key,
+    required this.child,
+    required this.onBackButtonPressed,
+  }) : super(key: key);
+
+  /// The widget below this widget in the tree.
+  final Widget child;
+
+  /// The callback function that will be called when the back button is pressed.
+  ///
+  /// It must return a boolean future with true if this child will handle the request;
+  /// otherwise, return a boolean future with false.
+  final ValueGetter<Future<bool>> onBackButtonPressed;
+
+  @override
+  State<BackButtonListener> createState() => _BackButtonListenerState();
+}
+
+class _BackButtonListenerState extends State<BackButtonListener> {
+  BackButtonDispatcher? dispatcher;
+
+  @override
+  void didChangeDependencies() {
+    dispatcher?.removeCallback(widget.onBackButtonPressed);
+
+    final BackButtonDispatcher? rootBackDispatcher = Router.of(context).backButtonDispatcher;
+    assert(rootBackDispatcher != null, 'The parent router must have a backButtonDispatcher to use this widget');
+
+    dispatcher = rootBackDispatcher!.createChildBackButtonDispatcher()
+      ..addCallback(widget.onBackButtonPressed)
+      ..takePriority();
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didUpdateWidget(covariant BackButtonListener oldWidget) {
+    if (oldWidget.onBackButtonPressed != widget.onBackButtonPressed) {
+      dispatcher?.removeCallback(oldWidget.onBackButtonPressed);
+      dispatcher?.addCallback(widget.onBackButtonPressed);
+      dispatcher?.takePriority();
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  void dispose() {
+    dispatcher?.removeCallback(widget.onBackButtonPressed);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// A delegate that is used by the [Router] widget to parse a route information
@@ -1091,7 +1178,7 @@ abstract class RouterDelegate<T> extends Listenable {
   /// When overriding this method, the configuration returned by this getter
   /// must be able to construct the current app state and build the widget
   /// with the same configuration in the [build] method if it is passed back
-  /// to the the [setNewRoutePath]. Otherwise, the browser backward and forward
+  /// to the [setNewRoutePath]. Otherwise, the browser backward and forward
   /// buttons will not work properly.
   ///
   /// By default, this getter returns null, which prevents the [Router] from
@@ -1132,8 +1219,8 @@ abstract class RouterDelegate<T> extends Listenable {
 /// getter and notifies listeners, typically the [Router] widget, when a new
 /// route information is available.
 ///
-/// When the router opts for the route information reporting (by overrides the
-/// [RouterDelegate.currentConfiguration] to return non-null), overrides the
+/// When the router opts for route information reporting (by overriding the
+/// [RouterDelegate.currentConfiguration] to return non-null), override the
 /// [routerReportsNewRouteInformation] method to process the route information.
 ///
 /// See also:
@@ -1167,7 +1254,7 @@ class PlatformRouteInformationProvider extends RouteInformationProvider with Wid
   /// Use the [initialRouteInformation] to set the default route information for this
   /// provider.
   PlatformRouteInformationProvider({
-    RouteInformation? initialRouteInformation
+    RouteInformation? initialRouteInformation,
   }) : _value = initialRouteInformation;
 
   @override

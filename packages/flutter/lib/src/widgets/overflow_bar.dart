@@ -5,7 +5,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 
 import 'basic.dart';
@@ -57,31 +56,31 @@ enum OverflowBarAlignment {
 /// Widget build(BuildContext context) {
 ///   return Container(
 ///     alignment: Alignment.center,
-///     padding: EdgeInsets.all(16),
+///     padding: const EdgeInsets.all(16),
 ///     color: Colors.black.withOpacity(0.15),
 ///     child: Material(
 ///       color: Colors.white,
 ///       elevation: 24,
-///       shape: RoundedRectangleBorder(
+///       shape: const RoundedRectangleBorder(
 ///         borderRadius: BorderRadius.all(Radius.circular(4))
 ///       ),
 ///       child: Padding(
-///         padding: EdgeInsets.all(8),
+///         padding: const EdgeInsets.all(8),
 ///         child: SingleChildScrollView(
 ///           child: Column(
 ///             mainAxisSize: MainAxisSize.min,
 ///             crossAxisAlignment: CrossAxisAlignment.stretch,
 ///             children: <Widget>[
-///               Container(height: 128, child: Placeholder()),
+///               const SizedBox(height: 128, child: Placeholder()),
 ///               Align(
 ///                 alignment: AlignmentDirectional.centerEnd,
 ///                 child: OverflowBar(
 ///                   spacing: 8,
 ///                   overflowAlignment: OverflowBarAlignment.end,
 ///                   children: <Widget>[
-///                     TextButton(child: Text('Cancel'), onPressed: () { }),
-///                     TextButton(child: Text('Really Really Cancel'), onPressed: () { }),
-///                     OutlinedButton(child: Text('OK'), onPressed: () { }),
+///                     TextButton(child: const Text('Cancel'), onPressed: () { }),
+///                     TextButton(child: const Text('Really Really Cancel'), onPressed: () { }),
+///                     OutlinedButton(child: const Text('OK'), onPressed: () { }),
 ///                   ],
 ///                 ),
 ///               ),
@@ -213,31 +212,31 @@ class OverflowBar extends MultiChildRenderObjectWidget {
   ///    text and text-direction-sensitive render objects.
   final TextDirection? textDirection;
 
-  /// {@macro flutter.widgets.Clip}
+  /// {@macro flutter.material.Material.clipBehavior}
   ///
   /// Defaults to [Clip.none], and must not be null.
   final Clip clipBehavior;
 
   @override
-  _RenderOverflowBar createRenderObject(BuildContext context) {
+  RenderObject createRenderObject(BuildContext context) {
     return _RenderOverflowBar(
       spacing: spacing,
       overflowSpacing: overflowSpacing,
       overflowAlignment: overflowAlignment,
       overflowDirection: overflowDirection,
-      textDirection: textDirection ?? Directionality.of(context)!,
+      textDirection: textDirection ?? Directionality.of(context),
       clipBehavior: clipBehavior,
     );
   }
 
   @override
-  void updateRenderObject(BuildContext context, _RenderOverflowBar renderObject) {
-    renderObject
+  void updateRenderObject(BuildContext context, RenderObject renderObject) {
+    (renderObject as _RenderOverflowBar)
       ..spacing = spacing
       ..overflowSpacing = overflowSpacing
       ..overflowAlignment = overflowAlignment
       ..overflowDirection = overflowDirection
-      ..textDirection = textDirection ?? Directionality.of(context)!
+      ..textDirection = textDirection ?? Directionality.of(context)
       ..clipBehavior = clipBehavior;
   }
 
@@ -437,6 +436,31 @@ class _RenderOverflowBar extends RenderBox
   }
 
   @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    RenderBox? child = firstChild;
+    if (child == null) {
+      return constraints.smallest;
+    }
+    final BoxConstraints childConstraints = constraints.loosen();
+    double childrenWidth = 0.0;
+    double maxChildHeight = 0.0;
+    double y = 0.0;
+    while (child != null) {
+      final Size childSize = child.getDryLayout(childConstraints);
+      childrenWidth += childSize.width;
+      maxChildHeight = math.max(maxChildHeight, childSize.height);
+      y += childSize.height + overflowSpacing;
+      child = childAfter(child);
+    }
+    final double actualWidth = childrenWidth + spacing * (childCount - 1);
+    if (actualWidth > constraints.maxWidth) {
+      return constraints.constrain(Size(constraints.maxWidth, y - overflowSpacing));
+    } else {
+      return constraints.constrain(Size(actualWidth, maxChildHeight));
+    }
+  }
+
+  @override
   void performLayout() {
     RenderBox? child = firstChild;
     if (child == null) {
@@ -486,17 +510,25 @@ class _RenderOverflowBar extends RenderBox
       }
       size = constraints.constrain(Size(constraints.maxWidth, y - overflowSpacing));
     } else {
-      // Default horizontal layout
-      child = rtl ? lastChild : firstChild;
-      RenderBox? nextChild() => rtl ? childBefore(child!) : childAfter(child!);
-      double x  = 0;
+      // Default horizontal layout.
+      size = constraints.constrain(Size(actualWidth, maxChildHeight));
+      child = firstChild;
+      double x = rtl ? size.width - child!.size.width : 0;
       while (child != null) {
         final _OverflowBarParentData childParentData = child.parentData! as _OverflowBarParentData;
         childParentData.offset = Offset(x, (maxChildHeight - child.size.height) / 2);
-        x += child.size.width + spacing;
-        child = nextChild();
+        // x is the horizontal origin of child. To advance x to the next child's
+        // origin for LTR: add the width of the current child. To advance x to
+        // the origin of the next child for RTL: subtract the width of the next
+        // child (if there is one).
+        if (!rtl) {
+          x += child.size.width + spacing;
+        }
+        child = childAfter(child);
+        if (rtl && child != null) {
+          x -= child.size.width + spacing;
+        }
       }
-      size = constraints.constrain(Size(actualWidth, maxChildHeight));
     }
   }
 

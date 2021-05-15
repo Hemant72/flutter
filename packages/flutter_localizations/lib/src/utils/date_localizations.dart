@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:intl/date_symbols.dart' as intl;
 import 'package:intl/date_symbol_data_custom.dart' as date_symbol_data_custom;
+import 'package:intl/date_symbols.dart' as intl;
+
 import '../l10n/generated_date_localizations.dart' as date_localizations;
 
 /// Tracks if date i18n data has been loaded.
@@ -28,7 +29,7 @@ void loadDateIntlDataIfNotLoaded() {
         // Strip scriptCode from the locale, as we do not distinguish between scripts
         // for dates.
         final List<String> codes = locale.split('_');
-        String countryCode;
+        String? countryCode;
         if (codes.length == 2) {
           countryCode = codes[1].length < 4 ? codes[1] : null;
         } else if (codes.length == 3) {
